@@ -136,8 +136,12 @@ export class SimpleOntarioScraper {
 
     const legalSource = await prisma.legalSource.create({
       data: {
-        jurisdictionId,
-        legalDomainId,
+        jurisdiction: {
+          connect: { id: jurisdictionId }
+        },
+        legalDomain: legalDomainId ? {
+          connect: { id: legalDomainId }
+        } : undefined,
         sourceType: 'statute',
         citation: statute.citation,
         shortTitle: statute.shortTitle,
@@ -146,7 +150,6 @@ export class SimpleOntarioScraper {
         officialUrl: statute.url,
         scrapedAt: new Date(),
         aiProcessed: false,
-        createdBy: 'simple-scraper',
         versionNumber: 1,
         inForce: true
       }
