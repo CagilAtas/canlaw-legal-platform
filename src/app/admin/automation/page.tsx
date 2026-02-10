@@ -132,7 +132,11 @@ export default function AutomationControlPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setScrapingResult(`✅ Successfully scraped ${data.sections} sections from ${data.citation}`);
+        if (data.alreadyExists) {
+          setScrapingResult(`ℹ️ ${data.citation} has already been scraped (${data.sections} sections). Use "Process with Claude AI" or "Reprocess" to generate slots.`);
+        } else {
+          setScrapingResult(`✅ Successfully scraped ${data.sections} sections from ${data.citation}`);
+        }
         await loadProgress(); // Reload progress data
       } else {
         setScrapingResult(`❌ Error: ${data.error}`);
@@ -206,7 +210,11 @@ export default function AutomationControlPage() {
         return;
       }
 
-      setScrapingResult(`✅ Scraped ${scrapeData.sections} sections`);
+      if (scrapeData.alreadyExists) {
+        setScrapingResult(`ℹ️ Already scraped (${scrapeData.sections} sections). Continuing to AI processing...`);
+      } else {
+        setScrapingResult(`✅ Scraped ${scrapeData.sections} sections`);
+      }
       setScraping(false);
 
       // Then run AI processing

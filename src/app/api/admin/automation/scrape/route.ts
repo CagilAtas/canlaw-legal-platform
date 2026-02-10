@@ -51,6 +51,29 @@ export async function POST(request: Request) {
 
     console.log(`✅ Scraped ${scraped.sections.length} sections`);
 
+    // Check if this source already exists
+    const existingSource = await prisma.legalSource.findFirst({
+      where: {
+        jurisdictionId: jurisdiction.id,
+        citation: scraped.citation,
+        versionNumber: 1
+      }
+    });
+
+    if (existingSource) {
+      console.log(`⚠️ Source already exists with ID: ${existingSource.id}`);
+      return NextResponse.json({
+        success: true,
+        message: 'This statute has already been scraped',
+        citation: scraped.citation,
+        sections: scraped.sections.length,
+        sourceId: existingSource.id,
+        jurisdiction: jurisdictionCode,
+        domain: domainSlug,
+        alreadyExists: true
+      });
+    }
+
     // Limit sections if specified
     if (maxSections && maxSections < scraped.sections.length) {
       scraped.sections = scraped.sections.slice(0, maxSections);
