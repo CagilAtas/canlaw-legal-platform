@@ -1,7 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface ProgressData {
+  stats: {
+    totalSources: number;
+    totalProcessed: number;
+    totalUnprocessed: number;
+    totalSlots: number;
+    totalProvisions: number;
+  };
+  progressByJurisdiction: Record<string, any>;
+  progressByDomain: Record<string, any>;
+  suggestions: Array<{
+    type: string;
+    priority: string;
+    title: string;
+    description: string;
+    action: any;
+    details: any;
+  }>;
+  recentSources: any[];
+}
 
 export default function AutomationControlPage() {
   const [scraping, setScraping] = useState(false);
@@ -9,12 +30,84 @@ export default function AutomationControlPage() {
   const [scrapingResult, setScrapingResult] = useState<string | null>(null);
   const [processingResult, setProcessingResult] = useState<string | null>(null);
 
+  // Progress tracking
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+
   // Configuration options
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('CA-ON');
   const [selectedDomain, setSelectedDomain] = useState('wrongful-termination');
   const [selectedStatute, setSelectedStatute] = useState('00e41'); // ESA code
   const [batchSize, setBatchSize] = useState('2');
   const [maxSections, setMaxSections] = useState('all');
+
+  // Load progress data
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const loadProgress = async () => {
+    try {
+      setLoadingProgress(true);
+      const response = await fetch('/api/admin/automation/progress');
+      const data = await response.json();
+      setProgressData(data);
+    } catch (error) {
+      console.error('Failed to load progress:', error);
+    } finally {
+      setLoadingProgress(false);
+    }
+  };
+
+  const applySuggestion = (suggestion: any) => {
+    const action = suggestion.action;
+
+    if (action.type === 'scrape' || action.type === 'scrape-new') {
+      setSelectedJurisdiction(action.jurisdiction);
+      setSelectedStatute(action.statuteCode);
+      setSelectedDomain(action.domain);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (action.type === 'process-ai') {
+      setSelectedJurisdiction(action.jurisdiction);
+      setSelectedDomain(action.domain);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleReprocess = async (sourceId: string, citation: string) => {
+    if (!confirm(`This will REPROCESS "${citation}" and regenerate all slots.\n\nExisting slots will be deleted and recreated.\n\nThis may take 10-20 minutes and will use AI credits. Continue?`)) {
+      return;
+    }
+
+    setProcessing(true);
+    setProcessingResult('🔄 Reprocessing...');
+
+    try {
+      const response = await fetch('/api/admin/automation/reprocess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceId,
+          domainSlug: selectedDomain,
+          batchSize: parseInt(batchSize),
+          deleteExisting: true
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setProcessingResult(`✅ Reprocessed ${data.citation}: Generated ${data.totalSlots} new slots`);
+        await loadProgress(); // Reload progress data
+      } else {
+        setProcessingResult(`❌ Reprocessing failed: ${data.error}`);
+      }
+    } catch (error: any) {
+      setProcessingResult(`❌ Error: ${error.message}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleScrape = async () => {
     if (!confirm(`This will scrape ${selectedStatute === '00e41' ? 'Employment Standards Act' : 'the selected statute'} from ontario.ca. This may take 5-10 minutes. Continue?`)) {
@@ -40,6 +133,7 @@ export default function AutomationControlPage() {
 
       if (response.ok) {
         setScrapingResult(`✅ Successfully scraped ${data.sections} sections from ${data.citation}`);
+        await loadProgress(); // Reload progress data
       } else {
         setScrapingResult(`❌ Error: ${data.error}`);
       }
@@ -72,6 +166,7 @@ export default function AutomationControlPage() {
 
       if (response.ok) {
         setProcessingResult(`✅ Successfully generated ${data.totalSlots} slots from ${data.batches} batches. Average confidence: ${(data.averageConfidence * 100).toFixed(1)}%`);
+        await loadProgress(); // Reload progress data
       } else {
         setProcessingResult(`❌ Error: ${data.error}`);
       }
@@ -138,6 +233,7 @@ export default function AutomationControlPage() {
 
       setProcessingResult(`✅ Generated ${processData.totalSlots} slots with ${(processData.averageConfidence * 100).toFixed(1)}% avg confidence`);
       setProcessing(false);
+      await loadProgress(); // Reload progress data
 
     } catch (error: any) {
       setScrapingResult(`❌ Pipeline error: ${error.message}`);
@@ -162,6 +258,140 @@ export default function AutomationControlPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Progress Dashboard */}
+        {loadingProgress ? (
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-4 py-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : progressData && (
+          <>
+            {/* Overall Stats */}
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">📊 Overall Progress</h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-blue-600 font-medium">Total Sources</p>
+                  <p className="text-2xl font-bold text-blue-900">{progressData.stats.totalSources}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-sm text-green-600 font-medium">Processed</p>
+                  <p className="text-2xl font-bold text-green-900">{progressData.stats.totalProcessed}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <p className="text-sm text-yellow-600 font-medium">Unprocessed</p>
+                  <p className="text-2xl font-bold text-yellow-900">{progressData.stats.totalUnprocessed}</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-sm text-purple-600 font-medium">Total Slots</p>
+                  <p className="text-2xl font-bold text-purple-900">{progressData.stats.totalSlots}</p>
+                </div>
+                <div className="bg-indigo-50 rounded-lg p-4">
+                  <p className="text-sm text-indigo-600 font-medium">Provisions</p>
+                  <p className="text-2xl font-bold text-indigo-900">{progressData.stats.totalProvisions}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Smart Suggestions */}
+            {progressData.suggestions && progressData.suggestions.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 shadow rounded-lg p-6 mb-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">💡 Smart Suggestions</h2>
+                <p className="text-sm text-gray-600 mb-4">The system analyzed your progress and recommends:</p>
+                <div className="space-y-3">
+                  {progressData.suggestions.slice(0, 3).map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className={`bg-white rounded-lg p-4 border-l-4 ${
+                        suggestion.priority === 'high' ? 'border-red-500' :
+                        suggestion.priority === 'medium' ? 'border-yellow-500' :
+                        'border-gray-400'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900 flex items-center">
+                            {suggestion.priority === 'high' && '🔴 '}
+                            {suggestion.priority === 'medium' && '🟡 '}
+                            {suggestion.priority === 'low' && '⚪ '}
+                            {suggestion.title}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">{suggestion.description}</p>
+                          {suggestion.details && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              {Object.entries(suggestion.details).map(([key, value]) => (
+                                <span key={key} className="mr-3">
+                                  <strong>{key}:</strong> {String(value)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => applySuggestion(suggestion)}
+                          className="ml-4 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Progress by Jurisdiction */}
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">📍 Progress by Jurisdiction</h2>
+              <div className="space-y-4">
+                {Object.entries(progressData.progressByJurisdiction).map(([code, data]: [string, any]) => (
+                  <div key={code} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-medium text-gray-900">{data.name} ({code})</h3>
+                      <span className="text-sm text-gray-500">{data.totalSlots} slots generated</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                      {data.statutes.map((statute: any) => (
+                        <div
+                          key={statute.code}
+                          className={`text-xs p-2 rounded border ${
+                            statute.aiProcessed ? 'bg-green-50 text-green-800 border-green-200' :
+                            statute.scraped ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                            'bg-gray-50 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          <div className="font-medium">{statute.name}</div>
+                          <div className="mt-1 mb-2">
+                            {statute.aiProcessed ? '✅ Processed' :
+                             statute.scraped ? `📚 Scraped (${statute.scrapedSections}/${statute.totalSections})` :
+                             '⚪ Not scraped'}
+                          </div>
+                          {statute.aiProcessed && statute.sourceId && (
+                            <button
+                              onClick={() => handleReprocess(statute.sourceId, statute.name)}
+                              disabled={processing}
+                              className="w-full px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                              🔄 Reprocess
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Configuration Panel */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
