@@ -1,6 +1,8 @@
-# CanLaw - Legal Knowledge Base & Slot System
+# CanLaw - AI-Powered Legal Assistance Platform
 
-A comprehensive legal assistance platform powered by AI, built with Next.js, TypeScript, PostgreSQL, and Prisma.
+> **Production-Ready Legal Knowledge Base with Automated Slot Generation**
+
+CanLaw is an intelligent legal assistance platform that automatically scrapes, processes, and structures Canadian legal statutes into an interactive interview system. Built with Next.js, TypeScript, PostgreSQL, and Claude AI.
 
 ## Architecture Overview
 
