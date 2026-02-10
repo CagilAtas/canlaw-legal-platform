@@ -8,9 +8,13 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { sourceId } = body;
+    const { sourceId, domainSlug = 'wrongful-termination', batchSize = 2 } = body;
 
-    console.log('🤖 Starting AI processing...');
+    console.log('🤖 Starting AI processing...', {
+      sourceId: sourceId || 'auto-detect',
+      domainSlug,
+      batchSize
+    });
 
     let legalSourceId = sourceId;
 
@@ -38,8 +42,8 @@ export async function POST(request: Request) {
     // Process with AI
     const generator = new BatchSlotGenerator();
     const result = await generator.processLegalSource(legalSourceId, {
-      legalDomainSlug: 'wrongful-termination',
-      batchSize: 2
+      legalDomainSlug: domainSlug,
+      batchSize: parseInt(String(batchSize), 10)
     });
 
     // Mark source as processed

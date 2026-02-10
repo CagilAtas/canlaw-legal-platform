@@ -9,15 +9,8 @@ export default function AutomationControlPage() {
   const [scrapingResult, setScrapingResult] = useState<string | null>(null);
   const [processingResult, setProcessingResult] = useState<string | null>(null);
 
-  // Configuration options
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState('CA-ON');
-  const [selectedDomain, setSelectedDomain] = useState('wrongful-termination');
-  const [selectedStatute, setSelectedStatute] = useState('00e41'); // ESA code
-  const [batchSize, setBatchSize] = useState('2');
-  const [maxSections, setMaxSections] = useState('all');
-
-  const handleScrape = async () => {
-    if (!confirm(`This will scrape ${selectedStatute === '00e41' ? 'Employment Standards Act' : 'the selected statute'} from ontario.ca. This may take 5-10 minutes. Continue?`)) {
+  const handleScrapeESA = async () => {
+    if (!confirm('This will scrape the full Ontario Employment Standards Act (761 sections). This may take 5-10 minutes. Continue?')) {
       return;
     }
 
@@ -25,15 +18,8 @@ export default function AutomationControlPage() {
     setScrapingResult(null);
 
     try {
-      const response = await fetch('/api/admin/automation/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jurisdictionCode: selectedJurisdiction,
-          domainSlug: selectedDomain,
-          statuteCode: selectedStatute,
-          maxSections: maxSections === 'all' ? undefined : parseInt(maxSections)
-        })
+      const response = await fetch('/api/admin/automation/scrape-esa', {
+        method: 'POST'
       });
 
       const data = await response.json();
@@ -51,7 +37,7 @@ export default function AutomationControlPage() {
   };
 
   const handleProcessWithAI = async () => {
-    if (!confirm(`This will process legal sources with Claude AI (batch size: ${batchSize}). This may take 10-20 minutes and will use AI credits. Continue?`)) {
+    if (!confirm('This will process all unprocessed legal sources with Claude AI to generate slots. This may take 10-20 minutes and will use AI credits. Continue?')) {
       return;
     }
 
@@ -60,12 +46,7 @@ export default function AutomationControlPage() {
 
     try {
       const response = await fetch('/api/admin/automation/process-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          domainSlug: selectedDomain,
-          batchSize: parseInt(batchSize)
-        })
+        method: 'POST'
       });
 
       const data = await response.json();
@@ -83,24 +64,17 @@ export default function AutomationControlPage() {
   };
 
   const handleFullPipeline = async () => {
-    if (!confirm(`This will run the FULL pipeline with your selected options:\n\nJurisdiction: ${selectedJurisdiction}\nDomain: ${selectedDomain}\nStatute: ${selectedStatute}\nBatch Size: ${batchSize}\n\nThis may take 20-30 minutes and will use AI credits. Continue?`)) {
+    if (!confirm('This will run the FULL pipeline: scrape ESA → process with AI → generate slots. This may take 20-30 minutes and will use significant AI credits. Continue?')) {
       return;
     }
 
     // Run scraping first
     setScraping(true);
-    setScrapingResult('🔄 Scraping...');
+    setScrapingResult('🔄 Scraping ESA...');
 
     try {
-      const scrapeResponse = await fetch('/api/admin/automation/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jurisdictionCode: selectedJurisdiction,
-          domainSlug: selectedDomain,
-          statuteCode: selectedStatute,
-          maxSections: maxSections === 'all' ? undefined : parseInt(maxSections)
-        })
+      const scrapeResponse = await fetch('/api/admin/automation/scrape-esa', {
+        method: 'POST'
       });
 
       const scrapeData = await scrapeResponse.json();
@@ -121,11 +95,7 @@ export default function AutomationControlPage() {
       const processResponse = await fetch('/api/admin/automation/process-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceId: scrapeData.sourceId,
-          domainSlug: selectedDomain,
-          batchSize: parseInt(batchSize)
-        })
+        body: JSON.stringify({ sourceId: scrapeData.sourceId })
       });
 
       const processData = await processResponse.json();
@@ -156,125 +126,12 @@ export default function AutomationControlPage() {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">Automation Control Panel</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Configure and run automated scraping and AI processing tasks
+            Run automated scraping and AI processing tasks
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Configuration Panel */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">⚙️ Configuration</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
-            {/* Jurisdiction */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Jurisdiction
-              </label>
-              <select
-                value={selectedJurisdiction}
-                onChange={(e) => setSelectedJurisdiction(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
-              >
-                <option value="CA-ON" className="text-gray-900">Ontario (CA-ON)</option>
-                <option value="CA-BC" className="text-gray-900">British Columbia (CA-BC)</option>
-                <option value="CA-AB" className="text-gray-900">Alberta (CA-AB)</option>
-                <option value="CA" className="text-gray-900">Canada Federal (CA)</option>
-              </select>
-            </div>
-
-            {/* Legal Domain */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Legal Domain
-              </label>
-              <select
-                value={selectedDomain}
-                onChange={(e) => setSelectedDomain(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
-              >
-                <option value="wrongful-termination" className="text-gray-900">Wrongful Termination</option>
-                <option value="employment-discrimination" className="text-gray-900">Employment Discrimination</option>
-                <option value="wage-hour-disputes" className="text-gray-900">Wage & Hour Disputes</option>
-                <option value="workplace-harassment" className="text-gray-900">Workplace Harassment</option>
-                <option value="landlord-tenant-residential" className="text-gray-900">Landlord-Tenant</option>
-                <option value="eviction-defense" className="text-gray-900">Eviction Defense</option>
-              </select>
-            </div>
-
-            {/* Statute to Scrape */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ontario Statute
-              </label>
-              <select
-                value={selectedStatute}
-                onChange={(e) => setSelectedStatute(e.target.value)}
-                disabled={selectedJurisdiction !== 'CA-ON'}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white disabled:bg-gray-100"
-              >
-                <option value="00e41" className="text-gray-900">Employment Standards Act (00e41)</option>
-                <option value="90h19" className="text-gray-900">Human Rights Code (90h19)</option>
-                <option value="06r16" className="text-gray-900">Residential Tenancies Act (06r16)</option>
-                <option value="90l07" className="text-gray-900">Labour Relations Act (90l07)</option>
-              </select>
-            </div>
-
-            {/* AI Batch Size */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                AI Batch Size
-              </label>
-              <select
-                value={batchSize}
-                onChange={(e) => setBatchSize(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
-              >
-                <option value="1" className="text-gray-900">1 provision/batch (slower, higher quality)</option>
-                <option value="2" className="text-gray-900">2 provisions/batch (balanced) ⭐</option>
-                <option value="3" className="text-gray-900">3 provisions/batch (faster)</option>
-                <option value="5" className="text-gray-900">5 provisions/batch (fastest, lower quality)</option>
-              </select>
-            </div>
-
-            {/* Max Sections */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sections to Process
-              </label>
-              <select
-                value={maxSections}
-                onChange={(e) => setMaxSections(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
-              >
-                <option value="all" className="text-gray-900">All sections (full coverage)</option>
-                <option value="10" className="text-gray-900">First 10 (quick test)</option>
-                <option value="20" className="text-gray-900">First 20 (medium test)</option>
-                <option value="50" className="text-gray-900">First 50 (partial coverage)</option>
-                <option value="100" className="text-gray-900">First 100 (substantial coverage)</option>
-              </select>
-            </div>
-
-            {/* Current Selection Summary */}
-            <div className="lg:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Selection
-              </label>
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-xs text-blue-900">
-                  <strong>Will process:</strong><br />
-                  {selectedJurisdiction} / {selectedDomain}<br />
-                  Statute: {selectedStatute}<br />
-                  Batch: {batchSize} / Limit: {maxSections}
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
           {/* Scraping Card */}
@@ -282,13 +139,13 @@ export default function AutomationControlPage() {
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">📚 Web Scraping</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Scrape legal statutes with your configuration
+                Scrape legal statutes from ontario.ca
               </p>
             </div>
             <div className="px-6 py-5">
               <div className="space-y-4">
                 <button
-                  onClick={handleScrape}
+                  onClick={handleScrapeESA}
                   disabled={scraping}
                   className={`w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white ${
                     scraping
@@ -302,10 +159,10 @@ export default function AutomationControlPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Scraping...
+                      Scraping ESA...
                     </>
                   ) : (
-                    `Scrape ${selectedStatute === '00e41' ? 'ESA' : 'Selected Statute'}`
+                    'Scrape Ontario ESA (761 sections)'
                   )}
                 </button>
 
@@ -322,10 +179,9 @@ export default function AutomationControlPage() {
                 )}
 
                 <div className="text-xs text-gray-500 space-y-1">
-                  <p>• Jurisdiction: {selectedJurisdiction}</p>
-                  <p>• Domain: {selectedDomain}</p>
-                  <p>• Statute: {selectedStatute}</p>
-                  <p>• Sections: {maxSections === 'all' ? 'All' : `First ${maxSections}`}</p>
+                  <p>• Fetches from ontario.ca/laws</p>
+                  <p>• Extracts all sections and provisions</p>
+                  <p>• Saves to database for AI processing</p>
                   <p>• Duration: ~5-10 minutes</p>
                 </div>
               </div>
@@ -337,7 +193,7 @@ export default function AutomationControlPage() {
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">🤖 AI Processing</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Generate slots from scraped sources
+                Generate slots from legal sources using Claude AI
               </p>
             </div>
             <div className="px-6 py-5">
@@ -377,11 +233,11 @@ export default function AutomationControlPage() {
                 )}
 
                 <div className="text-xs text-gray-500 space-y-1">
-                  <p>• Model: Claude Sonnet 4.5</p>
-                  <p>• Batch size: {batchSize} provisions</p>
-                  <p>• Domain: {selectedDomain}</p>
+                  <p>• Uses Claude Sonnet 4.5</p>
+                  <p>• Processes 2 provisions per batch</p>
+                  <p>• Generates input, calculated, outcome slots</p>
                   <p>• Duration: ~10-20 minutes</p>
-                  <p>• Cost: ${batchSize === '1' ? '5-10' : batchSize === '2' ? '2-5' : '1-3'} in API credits</p>
+                  <p>• Cost: ~$2-5 in API credits</p>
                 </div>
               </div>
             </div>
@@ -392,7 +248,7 @@ export default function AutomationControlPage() {
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">⚡ Full Pipeline (Recommended)</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Run the complete workflow with your selected configuration
+                Run the complete workflow: scrape → process → generate slots
               </p>
             </div>
             <div className="px-6 py-5">
@@ -415,7 +271,7 @@ export default function AutomationControlPage() {
                       Running Pipeline...
                     </>
                   ) : (
-                    'Run Full Pipeline: Scrape → Process → Generate Slots'
+                    'Run Full Pipeline: Scrape ESA → Process with AI → Generate Slots'
                   )}
                 </button>
 
@@ -447,17 +303,18 @@ export default function AutomationControlPage() {
                 )}
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-blue-900 mb-2">Your Pipeline Configuration:</h3>
+                  <h3 className="text-sm font-medium text-blue-900 mb-2">Pipeline Steps:</h3>
                   <ol className="list-decimal list-inside text-xs text-blue-800 space-y-1">
-                    <li>Scrape {selectedStatute === '00e41' ? 'Employment Standards Act' : 'selected statute'} from ontario.ca ({maxSections === 'all' ? 'all sections' : `first ${maxSections} sections`})</li>
-                    <li>Save to jurisdiction: {selectedJurisdiction}, domain: {selectedDomain}</li>
-                    <li>Process with Claude Sonnet 4.5 (batch size: {batchSize})</li>
+                    <li>Scrape Employment Standards Act from ontario.ca (761 sections)</li>
+                    <li>Save all provisions to database</li>
+                    <li>Process with Claude AI in batches of 2 provisions</li>
                     <li>Generate comprehensive slot definitions</li>
-                    <li>Save all slots for review</li>
+                    <li>Save slots to database for review</li>
                   </ol>
                   <div className="mt-3 text-xs text-blue-700">
-                    <p><strong>Estimated Duration:</strong> {maxSections === 'all' ? '20-30' : maxSections === '10' ? '5-10' : '10-15'} minutes</p>
-                    <p><strong>Expected Slots:</strong> {maxSections === 'all' ? '50-100' : Math.floor(parseInt(maxSections || '10') * 0.5)} slots</p>
+                    <p><strong>Total Duration:</strong> 20-30 minutes</p>
+                    <p><strong>Expected Output:</strong> 50-100 slot definitions</p>
+                    <p><strong>API Cost:</strong> $2-5 in Claude credits</p>
                   </div>
                 </div>
               </div>
