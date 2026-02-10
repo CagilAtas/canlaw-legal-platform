@@ -169,10 +169,27 @@ export default function AutomationControlPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setProcessingResult(`✅ Successfully generated ${data.totalSlots} slots from ${data.batches} batches. Average confidence: ${(data.averageConfidence * 100).toFixed(1)}%`);
+        // Create detailed completion report
+        const report = `✅ AI Processing Complete!\n\n` +
+          `📚 Source: ${data.citation}\n` +
+          `📍 Jurisdiction: ${data.jurisdiction}\n` +
+          `⚖️ Domain: ${data.domain || 'N/A'}\n` +
+          `📄 Provisions Processed: ${data.provisions}\n\n` +
+          `🎯 Results:\n` +
+          `• Total Slots Generated: ${data.totalSlots}\n` +
+          `• Batches Processed: ${data.batches}\n` +
+          `• Average Confidence: ${(data.averageConfidence * 100).toFixed(1)}%\n` +
+          `• Slots per Batch: ${data.slotsPerBatch.toFixed(1)}\n\n` +
+          `⏰ Completed at: ${new Date(data.processedAt).toLocaleTimeString()}`;
+
+        setProcessingResult(report);
         await loadProgress(); // Reload progress data
       } else {
-        setProcessingResult(`❌ Error: ${data.error}`);
+        if (data.alreadyProcessed) {
+          setProcessingResult(`ℹ️ ${data.citation} has already been processed.\n\n${data.message}\n\nProcessed at: ${new Date(data.processedAt).toLocaleString()}`);
+        } else {
+          setProcessingResult(`❌ Error: ${data.error}`);
+        }
       }
     } catch (error: any) {
       setProcessingResult(`❌ Error: ${error.message}`);
@@ -234,12 +251,29 @@ export default function AutomationControlPage() {
       const processData = await processResponse.json();
 
       if (!processResponse.ok) {
-        setProcessingResult(`❌ Processing failed: ${processData.error}`);
+        if (processData.alreadyProcessed) {
+          setProcessingResult(`ℹ️ ${processData.citation} was already processed.\n\n${processData.message}`);
+        } else {
+          setProcessingResult(`❌ Processing failed: ${processData.error}`);
+        }
         setProcessing(false);
         return;
       }
 
-      setProcessingResult(`✅ Generated ${processData.totalSlots} slots with ${(processData.averageConfidence * 100).toFixed(1)}% avg confidence`);
+      // Create detailed completion report
+      const report = `✅ Full Pipeline Complete!\n\n` +
+        `📚 Source: ${processData.citation}\n` +
+        `📍 Jurisdiction: ${processData.jurisdiction}\n` +
+        `⚖️ Domain: ${processData.domain || 'N/A'}\n` +
+        `📄 Provisions Processed: ${processData.provisions}\n\n` +
+        `🎯 Results:\n` +
+        `• Total Slots Generated: ${processData.totalSlots}\n` +
+        `• Batches Processed: ${processData.batches}\n` +
+        `• Average Confidence: ${(processData.averageConfidence * 100).toFixed(1)}%\n` +
+        `• Slots per Batch: ${processData.slotsPerBatch.toFixed(1)}\n\n` +
+        `⏰ Completed at: ${new Date(processData.processedAt).toLocaleTimeString()}`;
+
+      setProcessingResult(report);
       setProcessing(false);
       await loadProgress(); // Reload progress data
 
@@ -548,14 +582,24 @@ export default function AutomationControlPage() {
                 </button>
 
                 {scrapingResult && (
-                  <div className={`p-4 rounded-md ${
+                  <div className={`p-4 rounded-md border-2 ${
                     scrapingResult.startsWith('✅')
-                      ? 'bg-green-50 text-green-800'
+                      ? 'bg-green-50 border-green-200'
                       : scrapingResult.startsWith('🔄')
-                      ? 'bg-blue-50 text-blue-800'
-                      : 'bg-red-50 text-red-800'
+                      ? 'bg-blue-50 border-blue-200'
+                      : scrapingResult.startsWith('ℹ️')
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-red-50 border-red-200'
                   }`}>
-                    <p className="text-sm font-medium">{scrapingResult}</p>
+                    <p className={`text-sm font-medium ${
+                      scrapingResult.startsWith('✅')
+                        ? 'text-green-900'
+                        : scrapingResult.startsWith('ℹ️')
+                        ? 'text-yellow-900'
+                        : scrapingResult.startsWith('🔄')
+                        ? 'text-blue-900'
+                        : 'text-red-900'
+                    }`}>{scrapingResult}</p>
                   </div>
                 )}
 
@@ -605,12 +649,22 @@ export default function AutomationControlPage() {
                 {processingResult && (
                   <div className={`p-4 rounded-md ${
                     processingResult.startsWith('✅')
-                      ? 'bg-green-50 text-green-800'
+                      ? 'bg-green-50 border-2 border-green-200'
                       : processingResult.startsWith('🔄')
-                      ? 'bg-blue-50 text-blue-800'
-                      : 'bg-red-50 text-red-800'
+                      ? 'bg-blue-50 border-2 border-blue-200'
+                      : processingResult.startsWith('ℹ️')
+                      ? 'bg-yellow-50 border-2 border-yellow-200'
+                      : 'bg-red-50 border-2 border-red-200'
                   }`}>
-                    <p className="text-sm font-medium">{processingResult}</p>
+                    <pre className={`text-sm font-mono whitespace-pre-wrap ${
+                      processingResult.startsWith('✅')
+                        ? 'text-green-900'
+                        : processingResult.startsWith('ℹ️')
+                        ? 'text-yellow-900'
+                        : processingResult.startsWith('🔄')
+                        ? 'text-blue-900'
+                        : 'text-red-900'
+                    }`}>{processingResult}</pre>
                   </div>
                 )}
 
