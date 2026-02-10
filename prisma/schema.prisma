@@ -1,0 +1,451 @@
+// Prisma Schema for CanLaw Legal Knowledge Base & Slot System
+// 15 models for complete foundation architecture
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// KNOWLEDGE BASE HIERARCHY
+// ============================================================================
+
+model Jurisdiction {
+  id              String   @id @default(cuid())
+  code            String   @unique // 'CA', 'CA-ON', 'US-CA', etc.
+  name            String
+  fullName        String?
+  jurisdictionType String  // 'provincial', 'federal', 'territorial', 'state', 'country'
+  parentId        String?
+
+  metadata        Json     @default("{}")
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  parent          Jurisdiction? @relation("JurisdictionHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children        Jurisdiction[] @relation("JurisdictionHierarchy")
+
+  legalSources    LegalSource[]
+  slotDefinitions SlotDefinition[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model LegalDomain {
+  id              String   @id @default(cuid())
+  slug            String   @unique // 'employment-discrimination', 'wrongful-termination'
+  name            String
+  description     String?  @db.Text
+  parentId        String?
+  sortOrder       Int      @default(0)
+
+  metadata        Json     @default("{}")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  parent          LegalDomain?  @relation("DomainHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children        LegalDomain[] @relation("DomainHierarchy")
+
+  legalSources    LegalSource[]
+  slotDefinitions SlotDefinition[]
+
+  @@index([slug])
+}
+
+model LegalSource {
+  id              String   @id @default(cuid())
+  jurisdictionId  String
+  legalDomainId   String?
+
+  // Source identification
+  sourceType      String   // 'statute', 'regulation', 'case', 'tribunal_decision'
+  citation        String
+  shortTitle      String?
+  longTitle       String?  @db.Text
+
+  // Content
+  fullText        String?  @db.Text
+  summary         String?  @db.Text
+
+  // Versioning
+  versionNumber   Int      @default(1)
+  effectiveDate   DateTime?
+  repealDate      DateTime?
+  inForce         Boolean  @default(true)
+
+  // Source URLs
+  officialUrl     String?  @db.Text
+  scrapedAt       DateTime?
+
+  // AI metadata
+  aiProcessed     Boolean  @default(false)
+  aiProcessedAt   DateTime?
+  aiProcessingNotes Json?
+
+  // Relationships
+  parentSourceId  String?
+  supersedesSourceId String?
+
+  metadata        Json     @default("{}")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?  // 'ai-agent' or user ID
+
+  jurisdiction    Jurisdiction @relation(fields: [jurisdictionId], references: [id])
+  legalDomain     LegalDomain? @relation(fields: [legalDomainId], references: [id])
+  parentSource    LegalSource? @relation("SourceHierarchy", fields: [parentSourceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childSources    LegalSource[] @relation("SourceHierarchy")
+  supersedes      LegalSource? @relation("SourceSupersession", fields: [supersedesSourceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supersededBy    LegalSource[] @relation("SourceSupersession")
+
+  provisions      LegalProvision[]
+  slotDefinitions SlotDefinition[]
+  changeDetections LegalChangeDetection[]
+
+  @@unique([jurisdictionId, citation, versionNumber])
+  @@index([jurisdictionId])
+  @@index([legalDomainId])
+  @@index([citation])
+  @@index([inForce])
+  @@index([sourceType])
+}
+
+model LegalProvision {
+  id                String   @id @default(cuid())
+  legalSourceId     String
+
+  // Provision identification
+  provisionNumber   String   // '5', '5(1)', '5(1)(a)'
+  provisionType     String?  // 'section', 'subsection', 'paragraph'
+  heading           String?  @db.Text
+  provisionText     String   @db.Text
+
+  // Hierarchy
+  parentProvisionId String?
+  sortOrder         Int?
+
+  // Versioning
+  versionNumber     Int      @default(1)
+  effectiveDate     DateTime?
+  repealDate        DateTime?
+  inForce           Boolean  @default(true)
+
+  // AI analysis
+  aiSummary         String?  @db.Text
+  aiTags            String[]
+
+  metadata          Json     @default("{}")
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  legalSource       LegalSource @relation(fields: [legalSourceId], references: [id], onDelete: Cascade)
+  parentProvision   LegalProvision? @relation("ProvisionHierarchy", fields: [parentProvisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childProvisions   LegalProvision[] @relation("ProvisionHierarchy")
+
+  @@index([legalSourceId])
+  @@index([parentProvisionId])
+  @@index([provisionNumber])
+}
+
+// ============================================================================
+// SLOT SYSTEM
+// ============================================================================
+
+model SlotDefinition {
+  id                String   @id @default(cuid())
+
+  // Identification
+  slotKey           String   @unique // 'CA-ON_wrongful-termination_termination_date'
+  slotName          String
+  description       String?  @db.Text
+
+  // Categorization
+  jurisdictionId    String?
+  legalDomainId     String?
+  slotCategory      String   // 'input', 'calculated', 'outcome'
+
+  // Legal basis
+  legalSourceId     String?
+  legalProvisionIds String[] @default([])
+  legalCitationText String?  @db.Text
+
+  // CRITICAL: Slot behavior configuration (JSON)
+  // Contains: slotType, dataType, importance, validation, ui, calculation, ai metadata, etc.
+  config            Json
+
+  // Version control
+  versionNumber     Int      @default(1)
+  isActive          Boolean  @default(true)
+  supersededById    String?
+
+  changeReason      String?  @db.Text
+  changedBy         String?  // 'ai-agent' or user ID
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  effectiveFrom     DateTime?
+  effectiveUntil    DateTime?
+
+  jurisdiction      Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+  legalDomain       LegalDomain? @relation(fields: [legalDomainId], references: [id])
+  legalSource       LegalSource? @relation(fields: [legalSourceId], references: [id])
+  supersededBy      SlotDefinition? @relation("SlotVersioning", fields: [supersededById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supersedes        SlotDefinition[] @relation("SlotVersioning")
+
+  dependencies      SlotDependency[] @relation("DependentSlot")
+  dependedOnBy      SlotDependency[] @relation("RequiredSlot")
+
+  groupMemberships  SlotGroupMember[]
+
+  @@index([slotKey])
+  @@index([jurisdictionId])
+  @@index([legalDomainId])
+  @@index([isActive])
+  @@index([slotCategory])
+}
+
+model SlotDependency {
+  id                String   @id @default(cuid())
+  slotId            String
+  dependsOnSlotId   String
+  dependencyType    String   @default("required") // 'required', 'optional', 'conditional'
+  condition         Json?
+
+  createdAt         DateTime @default(now())
+
+  slot              SlotDefinition @relation("DependentSlot", fields: [slotId], references: [id], onDelete: Cascade)
+  dependsOnSlot     SlotDefinition @relation("RequiredSlot", fields: [dependsOnSlotId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, dependsOnSlotId])
+}
+
+model SlotGroup {
+  id                String   @id @default(cuid())
+  groupKey          String   @unique
+  groupName         String
+  description       String?  @db.Text
+  jurisdictionId    String?
+  legalDomainId     String?
+  sortOrder         Int      @default(0)
+  parentGroupId     String?
+
+  metadata          Json     @default("{}")
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  parentGroup       SlotGroup? @relation("GroupHierarchy", fields: [parentGroupId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childGroups       SlotGroup[] @relation("GroupHierarchy")
+
+  members           SlotGroupMember[]
+}
+
+model SlotGroupMember {
+  id                String   @id @default(cuid())
+  slotGroupId       String
+  slotDefinitionId  String
+  sortOrder         Int      @default(0)
+  isRequired        Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+
+  slotGroup         SlotGroup @relation(fields: [slotGroupId], references: [id], onDelete: Cascade)
+  slotDefinition    SlotDefinition @relation(fields: [slotDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([slotGroupId, slotDefinitionId])
+}
+
+// ============================================================================
+// CALCULATION RULES
+// ============================================================================
+
+model CalculationRule {
+  id                String   @id @default(cuid())
+  ruleKey           String   @unique
+  ruleName          String
+  description       String?  @db.Text
+
+  // Legal basis
+  jurisdictionId    String?
+  legalDomainId     String?
+  legalSourceId     String?
+  legalProvisionIds String[] @default([])
+
+  // Rule definition (JSON)
+  ruleConfig        Json
+
+  // Version control
+  versionNumber     Int      @default(1)
+  isActive          Boolean  @default(true)
+  effectiveFrom     DateTime?
+  effectiveUntil    DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+}
+
+// ============================================================================
+// AI AGENT TRACKING
+// ============================================================================
+
+model ScrapingJob {
+  id                String   @id @default(cuid())
+  jobType           String   // 'initial_scrape', 'update_check', 'full_refresh'
+  sourceUrl         String   @db.Text
+  jurisdictionId    String?
+  legalDomainId     String?
+
+  // Status
+  status            String   // 'pending', 'running', 'completed', 'failed'
+  startedAt         DateTime?
+  completedAt       DateTime?
+  errorMessage      String?  @db.Text
+
+  // Results
+  itemsFound        Int      @default(0)
+  itemsProcessed    Int      @default(0)
+  itemsCreated      Int      @default(0)
+  itemsUpdated      Int      @default(0)
+
+  // Metadata
+  scraperVersion    String?
+  metadata          Json     @default("{}")
+
+  createdAt         DateTime @default(now())
+
+  @@index([status])
+  @@index([jurisdictionId])
+}
+
+model AIProcessingJob {
+  id                String   @id @default(cuid())
+  jobType           String   // 'generate_slots', 'update_slots', 'generate_calculations'
+  legalSourceId     String?
+  legalProvisionId  String?
+
+  // Status
+  status            String   // 'pending', 'running', 'completed', 'failed'
+  startedAt         DateTime?
+  completedAt       DateTime?
+  errorMessage      String?  @db.Text
+
+  // AI details
+  aiModel           String?
+  promptTokens      Int?
+  completionTokens  Int?
+
+  // Results
+  slotsGenerated    Int      @default(0)
+  calculationsGenerated Int  @default(0)
+  confidenceScores  Json?
+
+  // Output
+  aiOutput          Json?
+  humanReviewRequired Boolean @default(false)
+  humanReviewedAt   DateTime?
+  humanReviewerId   String?
+
+  metadata          Json     @default("{}")
+
+  createdAt         DateTime @default(now())
+
+  @@index([status])
+  @@index([legalSourceId])
+}
+
+model LegalChangeDetection {
+  id                String   @id @default(cuid())
+  legalSourceId     String
+  detectionType     String   // 'new_source', 'amendment', 'repeal', 'new_case_law'
+
+  // What changed
+  changeSummary     String   @db.Text
+  oldContent        String?  @db.Text
+  newContent        String?  @db.Text
+  diff              Json?
+
+  // Detection
+  detectedAt        DateTime @default(now())
+  detectedBy        String?  // 'ai-agent'
+  confidenceScore   Float?
+
+  // Human review
+  requiresHumanReview Boolean @default(true)
+  humanReviewed     Boolean  @default(false)
+  humanReviewedAt   DateTime?
+  humanReviewerId   String?
+  humanReviewNotes  String?  @db.Text
+
+  // Impact analysis
+  affectedSlotIds   String[] @default([])
+  affectedCalculationIds String[] @default([])
+  impactSeverity    String?  // 'critical', 'high', 'medium', 'low'
+
+  metadata          Json     @default("{}")
+
+  createdAt         DateTime @default(now())
+
+  legalSource       LegalSource @relation(fields: [legalSourceId], references: [id])
+
+  @@index([legalSourceId])
+  @@index([humanReviewed])
+  @@index([impactSeverity])
+}
+
+// ============================================================================
+// RUNTIME DATA (Case interviews)
+// ============================================================================
+
+model Case {
+  id                String   @id @default(cuid())
+  userId            String?
+  jurisdictionId    String?
+  legalDomainId     String?
+
+  status            String   @default("draft") // 'draft', 'completed', 'archived'
+
+  // Slot data (actual user inputs and calculated values)
+  slotValues        Json     @default("{}")
+
+  // Calculation audit trail
+  calculationsLog   Json     @default("[]")
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([jurisdictionId])
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id                String   @id @default(cuid())
+  tableName         String
+  recordId          String
+  operation         String   // 'INSERT', 'UPDATE', 'DELETE'
+
+  oldData           Json?
+  newData           Json?
+
+  changedBy         String?
+  changedAt         DateTime @default(now())
+  changeReason      String?  @db.Text
+
+  @@index([tableName, recordId])
+  @@index([changedAt])
+}
