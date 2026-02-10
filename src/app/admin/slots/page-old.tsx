@@ -42,7 +42,6 @@ export default function AdminSlotsPage() {
   const [slots, setSlots] = useState<SlotDefinition[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Filters
   const [importance, setImportance] = useState('');
@@ -56,7 +55,6 @@ export default function AdminSlotsPage() {
 
   const fetchSlots = async () => {
     setLoading(true);
-    setError(null);
     try {
       const params = new URLSearchParams();
       if (importance) params.append('importance', importance);
@@ -65,25 +63,18 @@ export default function AdminSlotsPage() {
       if (minConfidence) params.append('minConfidence', minConfidence);
 
       const response = await fetch(`/api/admin/slots?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
       const data = await response.json();
 
       setSlots(data.slots || []);
       setStats(data.stats || null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch slots:', error);
-      setError(error.message || 'Failed to fetch slots');
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsReviewed = async (slotId: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const markAsReviewed = async (slotId: string) => {
     try {
       const response = await fetch('/api/admin/slots', {
         method: 'PATCH',
@@ -100,15 +91,15 @@ export default function AdminSlotsPage() {
       });
 
       if (response.ok) {
-        alert('✅ Slot marked as reviewed successfully!');
+        alert('Slot marked as reviewed successfully!');
         fetchSlots(); // Refresh list
       } else {
         const data = await response.json();
-        alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+        alert(`Failed to mark as reviewed: ${data.error || 'Unknown error'}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to mark as reviewed:', error);
-      alert(`❌ Error: ${error.message}`);
+      alert('Failed to mark as reviewed. Please try again.');
     }
   };
 
@@ -153,17 +144,6 @@ export default function AdminSlotsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex">
-              <div className="text-sm text-red-800">
-                <strong>Error:</strong> {error}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Statistics */}
         {stats && (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -192,7 +172,7 @@ export default function AdminSlotsPage() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Reviewed</dt>
                       <dd className="text-sm text-gray-900">
-                        {stats.total > 0 ? ((stats.reviewed / stats.total) * 100).toFixed(0) : 0}% complete
+                        {((stats.reviewed / stats.total) * 100).toFixed(0)}% complete
                       </dd>
                     </dl>
                   </div>
@@ -222,20 +202,20 @@ export default function AdminSlotsPage() {
                 <div className="text-sm font-medium text-gray-500 mb-2">By Importance</div>
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-red-600 font-medium">CRITICAL:</span>
-                    <span className="font-bold">{stats.byImportance.CRITICAL}</span>
+                    <span className="text-red-600">CRITICAL:</span>
+                    <span className="font-medium">{stats.byImportance.CRITICAL}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-orange-600 font-medium">HIGH:</span>
-                    <span className="font-bold">{stats.byImportance.HIGH}</span>
+                    <span className="text-orange-600">HIGH:</span>
+                    <span className="font-medium">{stats.byImportance.HIGH}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-yellow-600 font-medium">MODERATE:</span>
-                    <span className="font-bold">{stats.byImportance.MODERATE}</span>
+                    <span className="text-yellow-600">MODERATE:</span>
+                    <span className="font-medium">{stats.byImportance.MODERATE}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-600 font-medium">LOW:</span>
-                    <span className="font-bold">{stats.byImportance.LOW}</span>
+                    <span className="text-gray-600">LOW:</span>
+                    <span className="font-medium">{stats.byImportance.LOW}</span>
                   </div>
                 </div>
               </div>
@@ -254,13 +234,13 @@ export default function AdminSlotsPage() {
               <select
                 value={importance}
                 onChange={(e) => setImportance(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
-                <option value="" className="text-gray-900">All</option>
-                <option value="CRITICAL" className="text-gray-900">CRITICAL</option>
-                <option value="HIGH" className="text-gray-900">HIGH</option>
-                <option value="MODERATE" className="text-gray-900">MODERATE</option>
-                <option value="LOW" className="text-gray-900">LOW</option>
+                <option value="">All</option>
+                <option value="CRITICAL">CRITICAL</option>
+                <option value="HIGH">HIGH</option>
+                <option value="MODERATE">MODERATE</option>
+                <option value="LOW">LOW</option>
               </select>
             </div>
 
@@ -271,12 +251,12 @@ export default function AdminSlotsPage() {
               <select
                 value={slotType}
                 onChange={(e) => setSlotType(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
-                <option value="" className="text-gray-900">All</option>
-                <option value="input" className="text-gray-900">Input</option>
-                <option value="calculated" className="text-gray-900">Calculated</option>
-                <option value="outcome" className="text-gray-900">Outcome</option>
+                <option value="">All</option>
+                <option value="input">Input</option>
+                <option value="calculated">Calculated</option>
+                <option value="outcome">Outcome</option>
               </select>
             </div>
 
@@ -287,11 +267,11 @@ export default function AdminSlotsPage() {
               <select
                 value={reviewed}
                 onChange={(e) => setReviewed(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
-                <option value="" className="text-gray-900">All</option>
-                <option value="true" className="text-gray-900">Reviewed</option>
-                <option value="false" className="text-gray-900">Needs Review</option>
+                <option value="">All</option>
+                <option value="true">Reviewed</option>
+                <option value="false">Needs Review</option>
               </select>
             </div>
 
@@ -302,13 +282,13 @@ export default function AdminSlotsPage() {
               <select
                 value={minConfidence}
                 onChange={(e) => setMinConfidence(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 font-medium bg-white"
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               >
-                <option value="" className="text-gray-900">All</option>
-                <option value="0.95" className="text-gray-900">95%+</option>
-                <option value="0.90" className="text-gray-900">90%+</option>
-                <option value="0.80" className="text-gray-900">80%+</option>
-                <option value="0.70" className="text-gray-900">70%+</option>
+                <option value="">All</option>
+                <option value="0.95">95%+</option>
+                <option value="0.90">90%+</option>
+                <option value="0.80">80%+</option>
+                <option value="0.70">70%+</option>
               </select>
             </div>
           </div>
@@ -364,7 +344,10 @@ export default function AdminSlotsPage() {
                       <div className="ml-5 flex-shrink-0 flex items-center gap-2">
                         {!slot.config?.ai?.humanReviewed && (
                           <button
-                            onClick={(e) => markAsReviewed(slot.id, e)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              markAsReviewed(slot.id);
+                            }}
                             className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
                             Mark Reviewed

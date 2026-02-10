@@ -40,6 +40,21 @@ export default function AdminDashboard() {
             </div>
           </Link>
 
+          {/* Automation Control */}
+          <Link href="/admin/automation">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition cursor-pointer border-2 border-white">
+              <h2 className="text-xl font-semibold text-white mb-2">
+                ⚡ Automation Control
+              </h2>
+              <p className="text-blue-50">
+                Run scraping and AI processing tasks with one click
+              </p>
+              <div className="mt-4 text-white font-bold">
+                Control Panel →
+              </div>
+            </div>
+          </Link>
+
           {/* Scraping Jobs */}
           <Link href="/admin/scraping">
             <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition cursor-pointer border-l-4 border-purple-500">
@@ -47,7 +62,7 @@ export default function AdminDashboard() {
                 Scraping Jobs
               </h2>
               <p className="text-gray-600">
-                Monitor automated scraping and AI processing jobs
+                Monitor automated scraping job history
               </p>
               <div className="mt-4 text-purple-600 font-medium">
                 View Jobs →
