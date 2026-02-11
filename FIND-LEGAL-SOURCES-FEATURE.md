@@ -261,16 +261,24 @@ Instructions:
    - "confidence": How confident you are (0.0-1.0)
    - "reasoning": Why you chose this URL
 
-EXAMPLES of URL patterns:
-- CanLII (Canada): https://www.canlii.org/en/on/laws/stat/rso-1990-c-h19/latest/
+EXAMPLES of URL patterns (PREFER GOVERNMENT SITES):
+✅ WORKING SOURCES:
 - Ontario e-Laws: https://www.ontario.ca/laws/statute/00e41
 - BC Laws: https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96113_01
-- Federal (Canada): https://laws-lois.justice.gc.ca/eng/acts/I-2.5/
-- Florida (complete chapter): http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0700-0799/0760/0760.html
+- Federal Canada: https://laws-lois.justice.gc.ca/eng/acts/I-2.5/
+- Florida: http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0700-0799/0760/0760.html
+- England: https://www.legislation.gov.uk/ukpga/1996/18
+- NSW Australia: https://legislation.nsw.gov.au/view/html/inforce/current/act-1987-068
+- Alberta: https://kings-printer.alberta.ca/1266.cfm?page=RSA_2000.cfm
+- Saskatchewan: https://publications.saskatchewan.ca/...
+- Nova Scotia: https://nslegislature.ca/sites/default/files/legc/...
 
-IMPORTANT: For Florida statutes, use the URL format with the full path:
-  /statutes/index.cfm?App_mode=Display_Statute&URL=[range]/[chapter]/[chapter].html
-NOT the Title= format, as that format is harder to scrape.
+❌ AVOID (CAPTCHA BLOCKED):
+- CanLII: https://www.canlii.org/... (currently blocking automated access)
+
+IMPORTANT:
+- For Florida statutes, use URL format: /statutes/index.cfm?App_mode=Display_Statute&URL=[range]/[chapter]/[chapter].html
+- Prioritize government websites over legal databases like CanLII
 
 Return ONLY the JSON object, nothing else.`;
 
@@ -1104,6 +1112,52 @@ if (!extracted.citation || extracted.citation === 'unknown') {
 
 ---
 
+## Known Issues & Fixes
+
+### CanLII CAPTCHA Protection (February 2026)
+
+**Issue**: CanLII (canlii.org) enabled CAPTCHA protection, blocking automated scraping.
+
+**Symptoms**:
+```
+URL: https://www.canlii.org/en/ab/laws/stat/...
+✅ Fetched 1.5KB of HTML
+✅ AI extracted:
+   Citation: RSA 2000, c A-25.5
+   Title: Unable to extract - CAPTCHA protection enabled
+   Sections: 0
+⚠️ Warning: Scraped 0 sections
+```
+
+**Affected Jurisdictions**:
+- ❌ Alberta (via CanLII)
+- ❌ Nova Scotia (via CanLII)
+- ❌ Saskatchewan (via CanLII)
+- ❌ All Canadian provinces using CanLII
+
+**Fix Applied (February 2026)**:
+
+Updated AI prompt to avoid CanLII and prefer official government sites:
+
+```typescript
+EXAMPLES of URL patterns (PREFER GOVERNMENT SITES):
+✅ WORKING SOURCES:
+- Ontario e-Laws: https://www.ontario.ca/laws/...
+- BC Laws: https://www.bclaws.gov.bc.ca/...
+- Federal Canada: https://laws-lois.justice.gc.ca/... (proven working)
+- Alberta: https://kings-printer.alberta.ca/...
+- Saskatchewan: https://publications.saskatchewan.ca/...
+
+❌ AVOID (CAPTCHA BLOCKED):
+- CanLII: https://www.canlii.org/... (blocking automated access)
+```
+
+**Result**: Federal sites and provincial government sites work correctly (no CAPTCHA).
+
+**See Also**: [`CANLII-CAPTCHA-ISSUE.md`](CANLII-CAPTCHA-ISSUE.md) and [`TEST-RESULTS-AND-FIX.md`](TEST-RESULTS-AND-FIX.md)
+
+---
+
 ## Test Results
 
 ### Florida - Wage & Hour Disputes
@@ -1132,6 +1186,27 @@ if (!extracted.citation || extracted.citation === 'unknown') {
 - URLs: All got 403 errors initially → accepted anyway → headless browser bypassed
 - Extracted: 302 sections total
 - Time: 4.7 minutes
+
+### Saskatchewan - Consumer Fraud
+⚠️ **PARTIAL SUCCESS** (CanLII CAPTCHA issue discovered)
+- AI identified: 4 statutes
+- Results:
+  - 3 statutes via CanLII: ❌ 0 sections (CAPTCHA blocked)
+  - 1 federal statute (Competition Act): ✅ 62 sections (government site worked)
+- Issue: CanLII has CAPTCHA protection
+- Fix: Updated AI prompt to prefer government sites (see "Known Issues" above)
+
+### Alberta - Eviction Defense
+❌ **FAILED** (CanLII CAPTCHA)
+- CanLII URLs returned CAPTCHA → 0 sections
+- Fix applied: Now prefers `kings-printer.alberta.ca`
+- Status: Ready to re-test
+
+### Nova Scotia - Eviction Defense
+❌ **FAILED** (CanLII CAPTCHA)
+- CanLII URLs returned CAPTCHA → 0 sections
+- Fix applied: Now prefers `nslegislature.ca`
+- Status: Ready to re-test
 
 ---
 
