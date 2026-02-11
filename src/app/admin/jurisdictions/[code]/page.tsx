@@ -103,18 +103,12 @@ export default function JurisdictionDetailPage({ params }: { params: Promise<{ c
 
   const handleFindSources = async (domainSlug: string, domainName: string) => {
     setScrapingDomain(domainSlug);
-    setScrapingProgress('Starting scraping process...');
+    setScrapingProgress('🔍 Finding ALL applicable legal sources...');
 
     try {
-      setScrapingProgress('Launching headless browser...');
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      setScrapingProgress('Navigating to legal source...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setScrapingProgress('Scraping statute sections...');
-
-      // Call the API - this will actually scrape
+      // Call the API - this will find and scrape ALL applicable sources
       const response = await fetch(`/api/admin/jurisdictions/${code}/scrape`, {
         method: 'POST',
         headers: {
@@ -126,32 +120,63 @@ export default function JurisdictionDetailPage({ params }: { params: Promise<{ c
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || data.message || 'Failed to scrape legal source');
+        throw new Error(data.error || data.message || 'Failed to find legal sources');
       }
 
-      if (data.message === 'Legal source already exists') {
-        setScrapingProgress(`Found existing source: ${data.source?.citation || 'legal source'}!`);
-      } else {
-        setScrapingProgress(`Successfully scraped ${data.source?.citation || 'legal source'}!`);
-      }
+      // Show summary
+      const { summary, sources, failedSources } = data;
 
-      // Show cross-domain analysis if available
-      if (data.crossDomainAnalysis?.totalRelevant > 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      if (summary.totalApplicable === 0) {
+        setScrapingProgress('❌ No applicable sources found for this domain');
+      } else if (summary.newlyScraped === 0 && summary.alreadyExisted > 0) {
         setScrapingProgress(
-          `🔗 Auto-linked to ${data.crossDomainAnalysis.totalRelevant} domains: ${
-            data.crossDomainAnalysis.relevantDomains.slice(0, 3).join(', ')
-          }${data.crossDomainAnalysis.totalRelevant > 3 ? '...' : ''}`
+          `✅ All ${summary.totalApplicable} applicable source(s) already exist in database`
         );
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } else {
+      } else if (summary.newlyScraped > 0) {
+        setScrapingProgress(
+          `✅ Scraped ${summary.newlyScraped} new source(s)! (${summary.alreadyExisted} already existed)`
+        );
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Show details of scraped/existing sources
+      if (sources && sources.length > 0) {
+        for (const source of sources.slice(0, 3)) {
+          setScrapingProgress(
+            `📄 ${source.alreadyExisted ? 'Existing' : 'Scraped'}: ${source.title} (${source.sections || 0} sections)`
+          );
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        if (sources.length > 3) {
+          setScrapingProgress(`... and ${sources.length - 3} more source(s)`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // Show failed sources if any
+      if (failedSources && failedSources.length > 0) {
+        setScrapingProgress(`⚠️ Warning: ${failedSources.length} source(s) failed to scrape`);
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
-      setScrapingProgress('Updating database...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Show cross-domain linking summary
+      const allRelevantDomains = new Set();
+      sources?.forEach((source: any) => {
+        source.relevantDomains?.forEach((domain: string) => allRelevantDomains.add(domain));
+      });
 
-      setScrapingProgress('Updating display...');
+      if (allRelevantDomains.size > 1) {
+        setScrapingProgress(
+          `🔗 Auto-linked to ${allRelevantDomains.size} domains: ${
+            Array.from(allRelevantDomains).slice(0, 3).join(', ')
+          }${allRelevantDomains.size > 3 ? '...' : ''}`
+        );
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      setScrapingProgress('🔄 Updating display...');
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Reload jurisdiction data WITHOUT page reload - this keeps menus open
@@ -159,13 +184,13 @@ export default function JurisdictionDetailPage({ params }: { params: Promise<{ c
       const refreshData = await refreshResponse.json();
       setJurisdiction(refreshData.jurisdiction);
 
-      setScrapingProgress('Complete!');
+      setScrapingProgress('✅ Complete!');
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       setScrapingDomain(null);
       setScrapingProgress('');
     } catch (error: any) {
-      setScrapingProgress(`Error: ${error.message}`);
+      setScrapingProgress(`❌ Error: ${error.message}`);
       await new Promise(resolve => setTimeout(resolve, 3000));
       setScrapingDomain(null);
       setScrapingProgress('');

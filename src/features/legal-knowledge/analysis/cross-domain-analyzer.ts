@@ -110,10 +110,11 @@ export class CrossDomainAnalyzer {
         sourceKeywords: ['residential tenancies', 'rta', '2006, c. 17'],
         domains: [
           'landlord-tenant-residential',
-          'eviction-defense'
+          'eviction-defense',
+          'housing-discrimination'
         ],
-        score: 0.95,
-        reasoning: 'Residential Tenancies Act governs all residential rental relationships'
+        score: 0.90,
+        reasoning: 'Residential Tenancies Act governs residential rental relationships and includes anti-discrimination provisions'
       },
 
       // ===== CHILDREN'S LAW REFORM ACT =====
@@ -204,6 +205,77 @@ export class CrossDomainAnalyzer {
         ],
         score: 0.85,
         reasoning: 'OHSA requires safe workplaces and addresses workplace violence/harassment'
+      },
+
+      // ===== BC EMPLOYMENT STANDARDS ACT =====
+      {
+        sourceKeywords: ['employment standards act', 'rsbc 1996, c. 113'],
+        domains: [
+          'employment-contracts',
+          'wrongful-termination',
+          'wage-hour-disputes',
+          'workplace-harassment'
+        ],
+        score: 0.95,
+        reasoning: 'BC Employment Standards Act governs employment relationships'
+      },
+
+      // ===== BC HUMAN RIGHTS CODE =====
+      {
+        sourceKeywords: ['human rights code', 'rsbc 1996, c. 210'],
+        domains: [
+          'employment-discrimination',
+          'housing-discrimination',
+          'disability-rights'
+        ],
+        score: 0.95,
+        reasoning: 'BC Human Rights Code prohibits discrimination'
+      },
+
+      // ===== BC RESIDENTIAL TENANCY ACT =====
+      {
+        sourceKeywords: ['residential tenancy act', 'sbc 2002, c. 78'],
+        domains: [
+          'landlord-tenant-residential',
+          'eviction-defense',
+          'housing-discrimination'
+        ],
+        score: 0.95,
+        reasoning: 'BC Residential Tenancy Act governs residential rentals'
+      },
+
+      // ===== BC FAMILY LAW ACT =====
+      {
+        sourceKeywords: ['family law act', 'sbc 2011, c. 25'],
+        domains: [
+          'child-custody',
+          'child-support',
+          'divorce-separation',
+          'spousal-support'
+        ],
+        score: 0.95,
+        reasoning: 'BC Family Law Act governs family matters'
+      },
+
+      // ===== BC BUSINESS PRACTICES ACT =====
+      {
+        sourceKeywords: ['business practices', 'consumer protection', 'sbc 2004, c. 2'],
+        domains: [
+          'consumer-fraud',
+          'product-liability'
+        ],
+        score: 0.95,
+        reasoning: 'BC BPCPA regulates consumer transactions'
+      },
+
+      // ===== BC WORKERS COMPENSATION ACT =====
+      {
+        sourceKeywords: ['workers compensation', 'rsbc 1996, c. 492'],
+        domains: [
+          'workplace-harassment'
+        ],
+        score: 0.85,
+        reasoning: 'BC Workers Compensation Act covers workplace safety'
       }
     ];
 

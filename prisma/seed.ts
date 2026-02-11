@@ -162,7 +162,7 @@ async function main() {
       },
       versionNumber: 1,
       isActive: true,
-      createdBy: 'seed-script'
+      changedBy: 'seed-script'
     }
   });
 
@@ -214,7 +214,7 @@ async function main() {
       },
       versionNumber: 1,
       isActive: true,
-      createdBy: 'seed-script'
+      changedBy: 'seed-script'
     }
   });
 

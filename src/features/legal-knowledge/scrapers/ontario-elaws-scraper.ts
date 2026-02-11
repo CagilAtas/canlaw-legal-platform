@@ -228,7 +228,7 @@ export class OntarioELawsScraper {
    * Extract section number from element
    */
   private extractSectionNumber(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string | null {
     // Try various selectors for section numbers
@@ -256,7 +256,7 @@ export class OntarioELawsScraper {
    * Extract section heading
    */
   private extractSectionHeading(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string | undefined {
     const heading = $element.find('h2, h3, h4, .heading, .section-heading, .sec-heading').first();
@@ -272,7 +272,7 @@ export class OntarioELawsScraper {
    * Extract section text content
    */
   private extractSectionText(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string {
     // Clone element and remove heading/number elements

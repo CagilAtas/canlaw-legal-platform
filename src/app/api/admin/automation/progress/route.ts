@@ -79,9 +79,10 @@ export async function GET() {
       progressByJurisdiction[jurisdictionCode] = {
         name: jurisdiction.name,
         statutes: statutes.map(statute => {
-          const source = jurisdictionSources.find(s =>
-            s.citation.includes(statute.code) || s.metadata?.statuteCode === statute.code
-          );
+          const source = jurisdictionSources.find(s => {
+            const metadata = s.metadata as { statuteCode?: string } | null;
+            return s.citation.includes(statute.code) || metadata?.statuteCode === statute.code;
+          });
 
           return {
             code: statute.code,

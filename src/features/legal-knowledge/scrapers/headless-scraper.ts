@@ -76,7 +76,7 @@ export class HeadlessScraper {
       // Extract data using page.evaluate (runs in browser context)
       const data = await page.evaluate(() => {
         // Helper function to clean text
-        function cleanText(text) {
+        function cleanText(text: string): string {
           return text
             .replace(/\s+/g, ' ')
             .replace(/\n\s*\n/g, '\n')
@@ -85,6 +85,16 @@ export class HeadlessScraper {
 
         // Extract citation
         function extractCitation() {
+          // BC Laws format: Look for [RSBC 1996] CHAPTER 113 pattern
+          const h3Elements = document.querySelectorAll('h3');
+          for (var i = 0; i < h3Elements.length; i++) {
+            const text = cleanText(h3Elements[i].textContent || '');
+            if (text.match(/\[?[RS]SBC\s+\d{4}/i) || text.match(/CHAPTER\s+\d+/i)) {
+              return text.replace(/[\[\]]/g, '');
+            }
+          }
+
+          // Standard format
           const selectors = [
             '.statute-citation',
             '.citation',
@@ -132,8 +142,8 @@ export class HeadlessScraper {
         }
 
         // Extract sections
-        function extractSections() {
-          var sections = [];
+        function extractSections(): any[] {
+          var sections: any[] = [];
 
           // Try multiple selectors for sections
           var sectionSelectors = [
@@ -144,7 +154,7 @@ export class HeadlessScraper {
             'section'
           ];
 
-          var sectionElements = [];
+          var sectionElements: Element[] = [];
 
           for (var i = 0; i < sectionSelectors.length; i++) {
             sectionElements = Array.from(document.querySelectorAll(sectionSelectors[i]));
@@ -154,7 +164,7 @@ export class HeadlessScraper {
           // If no sections found, try parsing by headings
           if (sectionElements.length === 0) {
             var allElements = Array.from(document.querySelectorAll('h2, h3, h4, p, div'));
-            var currentSection = null;
+            var currentSection: any = null;
 
             allElements.forEach(function(el) {
               var text = cleanText(el.textContent || '');
@@ -185,37 +195,57 @@ export class HeadlessScraper {
           } else {
             // Parse section elements
             sectionElements.forEach(function(el, index) {
-              // Extract section number
-              var numberEl = el.querySelector('.section-number, .provision-number, strong:first-child');
-              var sectionNumber = numberEl ? cleanText(numberEl.textContent || '') : '';
+              var sectionNumber = '';
+              var heading: string | undefined = '';
 
-              // Try ID attribute
+              // BC Laws format: section number comes AFTER heading (e.g., "Definitions1", "Purposes of this Act2")
+              var firstTextNode = el.textContent || '';
+              var bcMatch = firstTextNode.match(/^([A-Za-z\s',]+?)(\d+(?:\.\d+)?)\s/);
+              if (bcMatch) {
+                heading = bcMatch[1].trim();
+                sectionNumber = bcMatch[2];
+              }
+
+              // Standard format: Try various selectors
               if (!sectionNumber) {
-                var id = el.getAttribute('id');
-                if (id) {
-                  var idMatch = id.match(/section[_-]?([\d.]+)/i);
-                  if (idMatch) sectionNumber = idMatch[1];
+                var numberEl = el.querySelector('.section-number, .provision-number, strong:first-child');
+                sectionNumber = numberEl ? cleanText(numberEl.textContent || '') : '';
+
+                // Try ID attribute
+                if (!sectionNumber) {
+                  var id = el.getAttribute('id');
+                  if (id) {
+                    var idMatch = id.match(/section[_-]?([\d.]+)/i);
+                    if (idMatch) sectionNumber = idMatch[1];
+                  }
+                }
+
+                // Try data attribute
+                if (!sectionNumber) {
+                  sectionNumber = el.getAttribute('data-section') || String(index + 1);
+                }
+
+                // Extract heading if not already found
+                if (!heading) {
+                  var headingEl = el.querySelector('h2, h3, h4, .heading, .section-heading');
+                  heading = headingEl ? cleanText(headingEl.textContent || '') : undefined;
                 }
               }
 
-              // Try data attribute
-              if (!sectionNumber) {
-                sectionNumber = el.getAttribute('data-section') || String(index + 1);
-              }
-
-              // Extract heading
-              var headingEl = el.querySelector('h2, h3, h4, .heading, .section-heading');
-              var heading = headingEl ? cleanText(headingEl.textContent || '') : undefined;
-
               // Extract text (clone and remove heading/number)
-              var clone = el.cloneNode(true);
+              var clone = el.cloneNode(true) as Element;
               clone.querySelectorAll('.section-number, .provision-number, h2, h3, h4').forEach(function(e) { e.remove(); });
               var text = cleanText(clone.textContent || '');
+
+              // For BC format, remove the heading+number from start of text
+              if (bcMatch && text.startsWith(bcMatch[0])) {
+                text = text.substring(bcMatch[0].length).trim();
+              }
 
               if (sectionNumber && text.length > 10) {
                 sections.push({
                   number: sectionNumber.replace(/\.$/, ''),
-                  heading,
+                  heading: heading || undefined,
                   text,
                   order: index
                 });

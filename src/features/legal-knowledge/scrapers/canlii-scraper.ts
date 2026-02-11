@@ -177,7 +177,7 @@ export class CanLIIScraper {
    * Extract section number from element
    */
   private extractSectionNumber(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string | null {
     // Try various selectors for section numbers
@@ -200,7 +200,7 @@ export class CanLIIScraper {
    * Extract section heading
    */
   private extractSectionHeading(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string | undefined {
     const heading = $element.find('h2, h3, h4, .heading, .section-heading').first();
@@ -216,7 +216,7 @@ export class CanLIIScraper {
    * Extract section text content
    */
   private extractSectionText(
-    $element: cheerio.Cheerio<cheerio.Element>,
+    $element: cheerio.Cheerio<any>,
     $: cheerio.CheerioAPI
   ): string {
     // Clone element and remove heading/number elements
