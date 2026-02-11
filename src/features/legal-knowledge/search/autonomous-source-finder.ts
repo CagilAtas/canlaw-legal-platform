@@ -261,27 +261,35 @@ CITATION: ${statuteCitation}
 JURISDICTION: ${jurisdictionName} (${jurisdictionCode})
 
 Instructions:
-1. Determine the most likely official government website for this jurisdiction's legislation
+1. **PREFER OFFICIAL GOVERNMENT WEBSITES** - avoid CanLII which has CAPTCHA protection
 2. Construct the most likely URL format based on:
-   - Common patterns for this jurisdiction (e.g., CanLII for Canada, ontario.ca for Ontario, bclaws.gov.bc.ca for BC)
+   - Official provincial/state/federal government legislation sites
    - The statute citation format
-   - Standard URL structures for legal databases
+   - Standard URL structures for government legal databases
 
 3. Return a JSON object with:
    - "url": The full URL you believe will have the statute
    - "confidence": How confident you are (0.0-1.0)
    - "reasoning": Why you chose this URL
 
-EXAMPLES of URL patterns:
-- CanLII (Canada): https://www.canlii.org/en/on/laws/stat/rso-1990-c-h19/latest/
+EXAMPLES of URL patterns (PREFER GOVERNMENT SITES):
+✅ WORKING SOURCES:
 - Ontario e-Laws: https://www.ontario.ca/laws/statute/00e41
 - BC Laws: https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96113_01
-- Federal (Canada): https://laws-lois.justice.gc.ca/eng/acts/I-2.5/
-- Florida (complete chapter): http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0700-0799/0760/0760.html
+- Federal Canada: https://laws-lois.justice.gc.ca/eng/acts/I-2.5/
+- Florida: http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0700-0799/0760/0760.html
+- England: https://www.legislation.gov.uk/ukpga/1996/18
+- NSW Australia: https://legislation.nsw.gov.au/view/html/inforce/current/act-1987-068
+- Alberta: https://kings-printer.alberta.ca/1266.cfm?page=RSA_2000.cfm
+- Saskatchewan: https://publications.saskatchewan.ca/...
+- Nova Scotia: https://nslegislature.ca/sites/default/files/legc/...
 
-IMPORTANT: For Florida statutes, use the URL format with the full path:
-  /statutes/index.cfm?App_mode=Display_Statute&URL=[range]/[chapter]/[chapter].html
-NOT the Title= format, as that format is harder to scrape.
+❌ AVOID (CAPTCHA BLOCKED):
+- CanLII: https://www.canlii.org/... (currently blocking automated access)
+
+IMPORTANT:
+- For Florida statutes, use URL format: /statutes/index.cfm?App_mode=Display_Statute&URL=[range]/[chapter]/[chapter].html
+- Prioritize government websites over legal databases like CanLII
 
 Return ONLY the JSON object, nothing else.`;
 
