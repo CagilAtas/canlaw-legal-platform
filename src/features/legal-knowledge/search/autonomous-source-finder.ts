@@ -282,6 +282,9 @@ export class AutonomousSourceFinder {
 
       // Disability Rights
       'disability-rights': ['bc-human-rights'],
+
+      // Criminal Defense (Federal law applies across Canada)
+      'criminal-defense': ['criminal-code'],
     };
 
     const statuteKeys = domainToStatutes[domainSlug] || [];
@@ -329,6 +332,13 @@ export class AutonomousSourceFinder {
         title: 'Workers Compensation Act',
         confidence: 0.90,
         reasoning: 'BC Workers Compensation Act covers workplace safety and harassment'
+      },
+      'criminal-code': {
+        url: 'https://laws-lois.justice.gc.ca/eng/acts/C-46/',
+        citation: 'RSC 1985, c. C-46',
+        title: 'Criminal Code',
+        confidence: 0.95,
+        reasoning: 'Criminal Code is the primary federal statute governing criminal law in Canada'
       }
     };
 

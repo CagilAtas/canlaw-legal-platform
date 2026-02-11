@@ -73,17 +73,11 @@ export async function POST(
       console.log(`   Reasoning: ${searchResult.reasoning}`);
 
       // Check if this source already exists in this jurisdiction
+      // Check by URL first (most reliable)
       const existing = await prisma.legalSource.findFirst({
         where: {
           jurisdictionId: jurisdiction.id,
-          OR: [
-            { officialUrl: url },
-            {
-              longTitle: {
-                contains: searchResult.title.split(',')[0]
-              }
-            }
-          ]
+          officialUrl: url
         }
       });
 
