@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { headlessScraper } from '@/features/legal-knowledge/scrapers/headless-scraper';
+import { aiScraper } from '@/features/legal-knowledge/scrapers/ai-scraper';
 import { autonomousSourceFinder } from '@/features/legal-knowledge/search/autonomous-source-finder';
 import { crossDomainAnalyzer } from '@/features/legal-knowledge/analysis/cross-domain-analyzer';
 
@@ -104,8 +104,8 @@ export async function POST(
 
       // Source doesn't exist - scrape it
       try {
-        console.log(`   🕷️ Scraping ${url}...`);
-        const statute = await headlessScraper.scrapeFromUrl(url);
+        console.log(`   🕷️ AI-powered scraping ${url}...`);
+        const statute = await aiScraper.scrapeFromUrl(url);
 
         if (statute.sections.length === 0) {
           console.log(`   ⚠️ Warning: Scraped 0 sections from ${url}`);
@@ -120,7 +120,7 @@ export async function POST(
         console.log(`   ✅ Scraped: ${statute.citation} (${statute.sections.length} sections)`);
 
         // Save to database
-        const legalSourceId = await headlessScraper.saveToDatabase(
+        const legalSourceId = await aiScraper.saveToDatabase(
           statute,
           jurisdiction.id,
           domain.id
