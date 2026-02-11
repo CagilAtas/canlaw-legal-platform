@@ -292,10 +292,28 @@ export default function AutomationControlPage() {
           <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block">
             ← Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Automation Control Panel</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Configure and run automated scraping and AI processing tasks
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Automation Control Panel</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Configure and run automated scraping and AI processing tasks
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Link
+                href="/admin/jurisdictions"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                📍 Manage Jurisdictions
+              </Link>
+              <Link
+                href="/admin/domains"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+              >
+                ⚖️ Manage Domains
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -316,9 +334,36 @@ export default function AutomationControlPage() {
           </div>
         ) : progressData && (
           <>
+            {/* Knowledge Base Overview */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 shadow rounded-lg p-6 mb-6 border border-blue-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">🗺️ Knowledge Base Coverage</h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Link href="/admin/jurisdictions" className="bg-white rounded-lg p-4 hover:shadow-md transition border border-blue-200">
+                  <p className="text-sm text-blue-600 font-medium">Jurisdictions</p>
+                  <p className="text-3xl font-bold text-blue-900">79</p>
+                  <p className="text-xs text-gray-500 mt-1">Across 4 countries</p>
+                </Link>
+                <Link href="/admin/domains" className="bg-white rounded-lg p-4 hover:shadow-md transition border border-purple-200">
+                  <p className="text-sm text-purple-600 font-medium">Legal Domains</p>
+                  <p className="text-3xl font-bold text-purple-900">30</p>
+                  <p className="text-xs text-gray-500 mt-1">Practice areas</p>
+                </Link>
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <p className="text-sm text-green-600 font-medium">Legal Sources</p>
+                  <p className="text-3xl font-bold text-green-900">{progressData.stats.totalSources}</p>
+                  <p className="text-xs text-gray-500 mt-1">Statutes & regulations</p>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-orange-200">
+                  <p className="text-sm text-orange-600 font-medium">Slot Definitions</p>
+                  <p className="text-3xl font-bold text-orange-900">{progressData.stats.totalSlots}</p>
+                  <p className="text-xs text-gray-500 mt-1">AI-generated</p>
+                </div>
+              </div>
+            </div>
+
             {/* Overall Stats */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">📊 Overall Progress</h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">📊 Processing Progress</h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
                 <div className="bg-blue-50 rounded-lg p-4">
                   <p className="text-sm text-blue-600 font-medium">Total Sources</p>
