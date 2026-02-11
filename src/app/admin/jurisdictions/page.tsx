@@ -298,7 +298,11 @@ export default function JurisdictionsPage() {
                         const hasNoCoverage = !coverage || coverage.domainsWithSources === 0;
 
                         return (
-                          <tr key={jurisdiction.id} className="hover:bg-gray-50 transition">
+                          <tr
+                            key={jurisdiction.id}
+                            onClick={() => window.location.href = `/admin/jurisdictions/${jurisdiction.code}`}
+                            className="hover:bg-blue-50 transition cursor-pointer"
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="font-mono text-sm font-semibold text-blue-600">
                                 {jurisdiction.code}
